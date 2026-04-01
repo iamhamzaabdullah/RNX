@@ -1,5 +1,7 @@
 ![Kaggle Stanford RNA 3D Folding Part 2 Certificate](assets/Hamza-A-Stanford-RNA-3D-Folding-Part-2.jpg)
 
+**Global Achievement:** Top 100 team worldwide in **Stanford RNA 3D Folding Part 2** on Kaggle (**89th out of 1,897 teams**).
+
 # RNX RNA-3D Pipeline
 
 High-performance RNA 3D structure inference pipeline for the **Stanford RNA 3D Folding 2** competition.
