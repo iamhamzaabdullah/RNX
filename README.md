@@ -1,3 +1,5 @@
+![Kaggle Stanford RNA 3D Folding Part 2 Certificate](assets/Hamza-A-Stanford-RNA-3D-Folding-Part-2.jpg)
+
 # RNX RNA-3D Pipeline
 
 High-performance RNA 3D structure inference pipeline for the **Stanford RNA 3D Folding 2** competition.
