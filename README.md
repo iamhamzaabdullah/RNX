@@ -1,134 +1,85 @@
 # RNX RNA-3D Pipeline
 
-High-performance RNA 3D structure inference pipeline for the **Stanford RNA 3D Folding 2** competition, combining:
+High-performance RNA 3D structure inference pipeline for the **Stanford RNA 3D Folding 2** competition.
 
+This repository combines:
 - template-based modeling (TBM),
 - targeted Protenix inference,
-- TM-aware ensemble selection,
-- and geometry-aware post-processing.
+- TM-aware candidate ranking,
+- geometry-aware refinement and submission generation.
 
-The current primary artifact is [`RNX_protenix_tm_tuned.ipynb`](./RNX_protenix_tm_tuned.ipynb), with source mirrored in [`RNX_protenix_tm_tuned.py`](./RNX_protenix_tm_tuned.py).
+## Primary Notebook (Best RNX Version)
 
-## Why This Repo
+The current best notebook variant in this repo is:
+- [`RNX_protenix_tm_tuned_parallel_push.ipynb`](./RNX_protenix_tm_tuned_parallel_push.ipynb)
 
-This project is optimized for real Kaggle constraints:
+Matching script export:
+- [`RNX_protenix_tm_tuned_parallel_push.py`](./RNX_protenix_tm_tuned_parallel_push.py)
 
-- strong leaderboard-focused quality under strict runtime limits,
-- robust behavior on very long targets,
-- graceful fallback when optional model assets are unavailable.
+Key improvements in this version include runtime-budget-aware optional Protenix routing and stronger medium-length target handling.
 
 ## Pipeline Overview
 
 ```mermaid
 flowchart LR
     A["Test Sequences"] --> B["Phase 1: TBM Retrieval + Adaptation"]
-    B --> C["Phase 2: Protenix (only queued targets)"]
-    B --> D["Long-target TBM Augmentation"]
-    C --> E["Phase 3: Merge + TM-aware Candidate Ranking"]
+    B --> C["Phase 2: Targeted Protenix Queue"]
+    B --> D["Long-Target TBM Augmentation"]
+    C --> E["Phase 3: Merge + TM-Aware Ranking"]
     D --> E
     E --> F["Geometry Constraints Refinement"]
     F --> G["submission.csv"]
 ```
 
-### Phase 1: TBM
-
-- Aligns test sequences against train/validation template pool.
-- Applies template adaptation and diversity transforms.
-- Uses configurable identity thresholds and relaxed long-sequence rescue.
-- Skips Protenix for very long sequences to avoid chunk-runtime blowups.
-
-### Phase 2: Protenix (Targeted)
-
-- Runs only for targets still missing high-confidence candidates.
-- Uses single-pass inference for manageable lengths.
-- Supports chunking logic, but current tuned defaults prioritize stability.
-
-### Phase 3: Ensemble + Refinement
-
-- Merges TBM and Protenix candidates.
-- Uses TM-proxy consensus + diversity-aware selection.
-- Applies geometry constraints and writes Kaggle-compatible `submission.csv`.
-- For long targets, fills missing slots using **TBM augmentation** before de-novo.
-
 ## Repository Layout
 
-- `RNX_protenix_tm_tuned.ipynb`: main competition notebook.
-- `RNX_protenix_tm_tuned.py`: script-form source of the tuned pipeline.
-- `RNX_benchmark_0699_redeveloped.ipynb`: earlier benchmark redevelopment variant.
-- `generate_rnx_benchmark_notebook.py`: generator for benchmark notebook.
-- `generate_rnx_benchmark_notebook.ps1`: PowerShell notebook generation workflow.
-- `ref_rna3d_protenix.py`: reference extraction used during development.
+- `RNX_protenix_tm_tuned_parallel_push.ipynb`: main competition notebook (recommended).
+- `RNX_protenix_tm_tuned_parallel_push.py`: script-form source mirror of the main notebook.
+- `RNX_protenix_tm_tuned.ipynb`: earlier tuned variant.
+- `RNX_protenix_tm_tuned.py`: script mirror for the earlier tuned variant.
+- `RNX_benchmark_0699_redeveloped.ipynb`: earlier benchmark redevelopment notebook.
+- `generate_rnx_benchmark_notebook.py`: benchmark notebook generator.
+- `generate_rnx_benchmark_notebook.ps1`: PowerShell benchmark notebook generation flow.
+- `ref_rna3d_protenix.py`: reference extraction utilities used during development.
 - `ref_tm_score_permutechains.py`: TM-score permutation reference utilities.
+- `submission_blend_kabsch.py`: blend/geometry helper utility.
 
 ## Quick Start (Kaggle)
 
 1. Create a Kaggle Notebook with GPU enabled.
-2. Add required datasets/models as notebook inputs:
-- `stanford-rna-3d-folding-2` (competition data)
-- Protenix code/checkpoint dataset (`qiweiyin/protenix-v1-adjusted` path used in defaults)
-- wheel datasets used by cell 1 (Biopython, Biotite, RDKit)
-3. Upload and open `RNX_protenix_tm_tuned.ipynb`.
+2. Add notebook inputs:
+- `stanford-rna-3d-folding-2` (competition dataset).
+- Protenix dataset used by defaults (`qiweiyin/protenix-v1-adjusted` layout).
+- wheel datasets for Biopython, Biotite, and RDKit.
+3. Upload/open `RNX_protenix_tm_tuned_parallel_push.ipynb`.
 4. Run all cells.
 5. Submit `/kaggle/working/submission.csv`.
 
-## Configuration (Environment Variables)
+## Configuration
 
-The tuned pipeline is configurable via environment variables:
+The notebook supports environment-variable tuning. Most important controls:
+- `PROTENIX_MAX_SEQ_LEN`: skip Protenix for very long targets.
+- `MAX_TBM_CANDS`: cap TBM candidates per target.
+- `WEAK_TBM_PCT_THRESHOLD`: weak-TBM trigger for optional Protenix.
+- `EXTRA_PROTENIX_MAX_TARGETS`: cap weak-target optional queue.
+- `FORCE_MEDIUM_PROTENIX` and medium-length bounds:
+`MEDIUM_PROTENIX_MIN_LEN`, `MEDIUM_PROTENIX_MAX_LEN`, `MEDIUM_PROTENIX_EXTRA_TARGETS`.
+- Runtime budget controls:
+`TARGET_TOTAL_RUNTIME_MIN`, `PHASE1_EXPECTED_SEC`, `PROTENIX_TIME_BUDGET_SEC`.
 
-| Variable | Default | Purpose |
-|---|---:|---|
-| `MAX_SEQ_LEN` | `512` | Protenix max sequence length per pass. |
-| `CHUNK_OVERLAP` | `128` | Overlap used when chunking is enabled. |
-| `MIN_SIMILARITY` | `0.0` | Minimum normalized TBM similarity. |
-| `MIN_PERCENT_IDENTITY` | `50.0` | Primary TBM identity threshold. |
-| `MAX_TBM_CANDS` | `9` | Cap on TBM candidates per target. |
-| `PROTENIX_MAX_SEQ_LEN` | `900` | Long-target cutoff for Protenix skip. |
-| `LONG_SEQ_RELAXED_MIN_PCT` | `36.0` | Relaxed identity floor for long-target TBM rescue. |
-| `SHORT_SEQ_RELAXED_MIN_PCT` | `42.0` | Relaxed identity floor for short-target top-up. |
-| `SHORT_SEQ_RELAXED_TOPUP` | `1` | Extra short-target TBM candidates before Protenix. |
-| `WEAK_TBM_PCT_THRESHOLD` | `72.0` | Weak TBM threshold for optional extra Protenix routing. |
-| `EXTRA_PROTENIX_MAX_TARGETS` | `24` | Cap for weak-target extra Protenix requests. |
-| `USE_MSA` | `false` | Protenix MSA switch (string bool). |
-| `USE_TEMPLATE` | `false` | Protenix template switch (string bool). |
-| `USE_RNA_MSA` | `true` | RNA MSA switch (string bool). |
-| `MODEL_N_SAMPLE` | `N_SAMPLE` | Protenix samples per queued target. |
-| `TEST_CSV` | competition default | Override test CSV path. |
-| `SUBMISSION_CSV` | `/kaggle/working/submission.csv` | Output path. |
-| `PROTENIX_CODE_DIR` | built-in default | Protenix code path. |
-| `PROTENIX_ROOT_DIR` | built-in default | Protenix root path. |
+## Local Development
 
-## Runtime and Stability Notes
-
-- The tuned configuration is built to avoid classic failures:
-- kernel OOM on long sequences,
-- full-queue Protenix overrun,
-- submission timeout from large chunk batches.
-
-Practical signals of a healthy run:
-
-- `Need Protenix` is small (not all targets).
-- Long targets like `9MME` and `9ZCC` are skipped from Protenix.
-- Phase 3 reports long-target TBM augmentation instead of excessive de-novo fallback.
+This project is primarily Kaggle-first, but local scripting support is included:
+- install dependencies from `requirements.txt`,
+- keep paths configurable via environment variables,
+- use smaller test slices for fast iteration before full Kaggle reruns.
 
 ## Reproducibility
 
-- Random seed is fixed in code (`SEED = 42`).
-- Candidate generation and augmentation use deterministic seed formulas.
-- Output format strictly matches competition submission schema.
-
-## Troubleshooting
-
-- `RNet2 ... missing-config`:
-  - not used by this tuned pipeline path; safe to ignore for this repo’s main notebook.
-- Biopython deprecation warnings:
-  - already addressed in aligner field usage; non-fatal if seen from external code.
-- `submission notebook exceeded runtime`:
-  - verify `PROTENIX_MAX_SEQ_LEN` and queue size in Phase 1/2 logs.
-- `IndexError` during template adaptation:
-  - use the current tuned notebook/script version from this repo.
+- Seed is fixed (`SEED = 42`).
+- Candidate generation uses deterministic seed formulas.
+- Output format matches competition submission schema.
 
 ## Disclaimer
 
-Leaderboard score depends on hidden evaluation data and cannot be guaranteed.
-This repository is engineered for a high-quality, runtime-safe, competition-ready baseline with strong practical reliability.
-
+Leaderboard performance depends on hidden evaluation targets and cannot be guaranteed.

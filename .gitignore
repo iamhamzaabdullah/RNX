@@ -1,0 +1,30 @@
+# Python bytecode and tooling
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.python-version
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local and generated outputs
+submission.csv
+*.log
+tmp/
+temp/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

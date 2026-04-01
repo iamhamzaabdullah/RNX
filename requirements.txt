@@ -1,0 +1,7 @@
+numpy>=1.26
+pandas>=2.2
+tqdm>=4.66
+biopython>=1.86
+biotite>=1.6
+torch>=2.3
+rdkit>=2024.9.6
